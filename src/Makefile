@@ -27,9 +27,6 @@ PREFIX ?= mipsel-none-elf
 endif
 ARCHFLAGS = -march=mips1 -mabi=32 -EL -fno-pic -mno-shared -mno-abicalls -mfp32 -mno-llsc
 ARCHFLAGS += -fno-stack-protector -nostdlib -ffreestanding
-# string.format converts to double for %f, %e and %g. The PS1 has no FPU, so
-# that has to go through libgcc's soft-float routines.
-ARCHFLAGS += -msoft-float
 CPPFLAGS = -Wall -DLUA_COMPAT_ALL -DLUA_TARGET_PSX
 CPPFLAGS += -ffunction-sections
 CPPFLAGS += -fdata-sections -mno-gpopt -fomit-frame-pointer
