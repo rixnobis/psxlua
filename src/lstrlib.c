@@ -804,19 +804,6 @@ static int str_gsub (lua_State *L) {
 #endif				/* } */
 
 
-/*
-** LUA_FLTFRMLEN is the length modifier for float conversions in
-** 'string.format'; LUA_FLTFRM_T is the float type corresponding to
-** the previous length
-*/
-#if !defined(LUA_FLTFRMLEN)
-
-#define LUA_FLTFRMLEN		""
-#define LUA_FLTFRM_T		double
-
-#endif
-
-
 /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
 #define MAX_ITEM	512
 /* valid flags in a format specification */
@@ -932,14 +919,12 @@ static int str_format (lua_State *L) {
           nb = luaI_sprintf(buff, form, ni);
           break;
         }
-        case 'e': case 'E': case 'f':
-#if defined(LUA_USE_AFORMAT)
-        case 'a': case 'A':
-#endif
-        case 'g': case 'G': {
-          addlenmod(form, LUA_FLTFRMLEN);
-          nb = luaI_sprintf(buff, form, (LUA_FLTFRM_T)luaL_checknumber(L, arg));
-          break;
+        case 'e': case 'E': case 'f': case 'F':
+        case 'a': case 'A': case 'g': case 'G': {
+          /* numbers are integers here, and there is no floating point */
+          return luaL_error(L, "invalid option " LUA_QL("%%%c") " to "
+                               LUA_QL("format") " (no floating point)",
+                               *(strfrmt - 1));
         }
         case 'q': {
           addquoted(L, &b, arg);
