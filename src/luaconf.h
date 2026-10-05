@@ -454,12 +454,23 @@ long int luaA_strtol(const char *nptr, char **endptr, int base);
 /* the following operations need the math library */
 #if defined(lobject_c) || defined(lvm_c)
 #define luai_nummod(L,a,b)	((a) % (b))
+/*
+** Integer power. A negative exponent gives the truncated quotient
+** 1 / a^-b, which is 0 unless |a| is 1, and 0 for 0^-b. Overflow wraps.
+*/
 static inline long luai_numpowimpl(long a, long b) {
-  long r = a;
-  for (unsigned i = 0; i < b; i++) {
-    r *= a;
+  unsigned long r = 1, x = (unsigned long)a;
+  if (b < 0) {
+    if (a == 1) return 1;
+    if (a == -1) return (b & 1) ? -1 : 1;
+    return 0;
   }
-  return r;
+  while (b) {
+    if (b & 1) r *= x;
+    x *= x;
+    b >>= 1;
+  }
+  return (long)r;
 }
 #define luai_numpow(L,a,b)	(luai_numpowimpl((a),(b)))
 #endif

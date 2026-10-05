@@ -122,65 +122,57 @@ static const inline int strisspace(char c) {
          c == '\v';
 }
 
+static int digitval(unsigned char c) {
+  if ((c >= '0') && (c <= '9')) return c - '0';
+  if ((c >= 'a') && (c <= 'z')) return c - 'a' + 10;
+  if ((c >= 'A') && (c <= 'Z')) return c - 'A' + 10;
+  return 36;
+}
+
+/*
+** Same contract as strtol: *endptr is set on every return, and points at
+** nptr when no digit was read.
+*/
 long int luaA_strtol(const char *nptr, char **endptr, int base) {
+  const char *s = nptr;
+  int negative = 0;
+  int digits = 0;
+  unsigned long int r = 0;
+
+  if (endptr) {
+    *endptr = (char *)nptr;
+  }
   if (base < 0 || base == 1 || base >= 37) {
     return 0;
   }
 
-  if ((*nptr == '0') && ((*(nptr + 1) == 'x') || (*(nptr + 1) == 'X'))) {
-    if ((base != 0) && (base != 16)) {
-      return 0;
-    }
+  while (strisspace(*s)) {
+    s++;
+  }
+  if ((*s == '+') || (*s == '-')) {
+    negative = *s == '-';
+    s++;
+  }
+
+  if (((base == 0) || (base == 16)) && (s[0] == '0') &&
+      ((s[1] == 'x') || (s[1] == 'X')) && (digitval(s[2]) < 16)) {
     base = 16;
-    nptr += 2;
-  } else if (*nptr == '0') {
-    if ((base != 0) && (base != 8) && (*(nptr + 1) != 0)) {
-      return 0;
-    }
-    base = 8;
-    nptr++;
+    s += 2;
   } else if (base == 0) {
-    base = 10;
+    base = (*s == '0') ? 8 : 10;
   }
 
-  int got_something = 0;
-  int negative = 0;
-  unsigned long int r = 0;
-
-  char c;
-  char maxLC = 'a' + (base - 10) - 1;
-  char maxUC = 'A' + (base - 10) - 1;
-
-  while ((c = *nptr++)) {
-    if (strisspace(c) && !got_something) {
-      continue;
-    }
-    if (((c == '+') || (c == '-')) && !got_something) {
-      got_something = 1;
-      if (c == '-') {
-        negative = 1;
-      }
-      continue;
-    }
-    if ((c >= '0') && (c <= '9')) {
-      c -= '0';
-    } else if ((c >= 'a') && (c <= maxLC)) {
-      c -= 'a' - 10;
-    } else if ((c >= 'A') && (c <= maxUC)) {
-      c -= 'A' - 10;
-    } else {
+  for (;; s++) {
+    int d = digitval(*s);
+    if (d >= base) {
       break;
     }
-    if (c >= base) {
-      break;
-    }
-    got_something = 1;
-    r *= base;
-    r += c;
+    r = r * base + d;
+    digits = 1;
   }
 
-  if (endptr) {
-    *endptr = (char *)nptr - 1;
+  if (endptr && digits) {
+    *endptr = (char *)s;
   }
   return negative ? -r : r;
 }
