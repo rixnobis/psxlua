@@ -24,6 +24,9 @@ jobs:
           repository: pcsx-redux/nugget
           path: nugget
 
+      - name: Number primitives
+        run: cc -Wall -I src -o /tmp/numbers tests/numbers.c && /tmp/numbers
+
       - name: Library
         run: make -C src psx -j2
 
