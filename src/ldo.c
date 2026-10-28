@@ -47,21 +47,14 @@
 */
 
 #ifdef LUA_TARGET_PSX
+#include "lpsxbios.h"
 struct JmpBuf { void * regs[12]; };
-static inline int syscall_setjmp(struct JmpBuf *buf) {
-    register int n asm("t1") = 0x13;
-    __asm__ volatile("" : "=r"(n) : "r"(n));
-    return ((int (*)(struct JmpBuf * buf))0xa0)(buf);
-}
-
-static inline __attribute__((noreturn)) void syscall_longjmp(struct JmpBuf *buf, int ret) {
-    register int n asm("t1") = 0x14;
-    __asm__ volatile("" : "=r"(n) : "r"(n));
-    ((void (*)(struct JmpBuf *, int))0xa0)(buf, ret);
-    __builtin_unreachable();
-}
-#define LUAI_THROW(L,c)         syscall_longjmp(&(c)->b, 1)
-#define LUAI_TRY(L,c,a)         if (syscall_setjmp(&(c)->b) == 0) { a }
+LUAI_PSX_BIOS_THUNK(setjmp, 0xa0, 0x13)
+LUAI_PSX_BIOS_EXTERN int __psxlua_bios_setjmp(struct JmpBuf *buf) __attribute__((returns_twice));
+LUAI_PSX_BIOS_THUNK(longjmp, 0xa0, 0x14)
+LUAI_PSX_BIOS_EXTERN void __psxlua_bios_longjmp(struct JmpBuf *buf, int ret) __attribute__((noreturn));
+#define LUAI_THROW(L,c)         __psxlua_bios_longjmp(&(c)->b, 1)
+#define LUAI_TRY(L,c,a)         if (__psxlua_bios_setjmp(&(c)->b) == 0) { a }
 #define luai_jmpbuf             struct JmpBuf
 #else
 #include <setjmp.h>
@@ -99,12 +92,9 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 
 
 #ifdef LUA_TARGET_PSX
-static inline void abort() {
-    register int n asm("t1") = 0x40;
-    __asm__ volatile("" : "=r"(n) : "r"(n));
-    ((void (*)())0xa0)();
-    __builtin_unreachable();
-}
+LUAI_PSX_BIOS_THUNK(abort, 0xa0, 0x40)
+LUAI_PSX_BIOS_EXTERN void __psxlua_bios_abort(void) __attribute__((noreturn));
+#define abort() __psxlua_bios_abort()
 #else
 #include <stdlib.h>
 #endif

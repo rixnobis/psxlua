@@ -211,18 +211,13 @@
 */
 #if defined(LUA_LIB) || defined(lua_c)
 #ifdef LUA_TARGET_PSX
-static inline void syscall_write(int fd, const void * buf, size_t count) {
-    register int n asm("t1") = 0x03;
-    __asm__ volatile("" : "=r"(n) : "r"(n));
-    ((void (*)(int, const void *, size_t))0xa0)(fd, buf, count);
-}
-static inline void syscall_putchar(int c) {
-    register int n asm("t1") = 0x3c;
-    __asm__ volatile("" : "=r"(n) : "r"(n));
-    ((void (*)(int))0xa0)(c);
-}
-#define luai_writestring(s,l)	syscall_write(1, (s), (l))
-#define luai_writeline()	syscall_putchar('\n')
+#include "lpsxbios.h"
+LUAI_PSX_BIOS_THUNK(write, 0xa0, 0x03)
+LUAI_PSX_BIOS_EXTERN size_t __psxlua_bios_write(int fd, const void * buf, size_t count);
+LUAI_PSX_BIOS_THUNK(putchar, 0xa0, 0x3c)
+LUAI_PSX_BIOS_EXTERN void __psxlua_bios_putchar(int c);
+#define luai_writestring(s,l)	__psxlua_bios_write(1, (s), (l))
+#define luai_writeline()	__psxlua_bios_putchar('\n')
 #else
 #include <stdio.h>
 #define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
